@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Truco">
+<title>Truco Fósforos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: una tarjeta por equipo, apiladas. Cada una tiene encabezado (nombre, puntos, − / +)
+   y dos filas de tres cuadrados de fósforos: malas (1–15) y buenas (16–30).
+   Cada cuadrado = 5 fósforos: cuatro lados y la diagonal. */
+:root {
+  --bg: #DCE5D8;
+  --card: #EBF1E7;
+  --fg: #14301F;
+  --muted: #4A6452;
+  --line: #B1C3AF;
+  --wood: #D2A468;
+  --wood-edge: #7C5526;
+  --head: #C42F1B;
+  --head-edge: #7E1B0E;
+  --ghost: #14301F22;
+  --btn: #1D4A31;
+  --btn-fg: #F1F6EE;
+  --win: #B52A18;
+  --font-display: 'Alfa Slab One', Georgia, 'Times New Roman', serif;
+  --font-body: 'Barlow Semi Condensed', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E2A1B;
+    --card: #16392A;
+    --fg: #EAF1E6;
+    --muted: #9FB8A5;
+    --line: #2B5540;
+    --wood: #E0B77A;
+    --wood-edge: #8F6A38;
+    --head: #E8482C;
+    --head-edge: #8F2412;
+    --ghost: #EAF1E618;
+    --btn: #E4BC6C;
+    --btn-fg: #241705;
+    --win: #F27B64;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E2A1B;
+  --card: #16392A;
+  --fg: #EAF1E6;
+  --muted: #9FB8A5;
+  --line: #2B5540;
+  --wood: #E0B77A;
+  --wood-edge: #8F6A38;
+  --head: #E8482C;
+  --head-edge: #8F2412;
+  --ghost: #EAF1E618;
+  --btn: #E4BC6C;
+  --btn-fg: #241705;
+  --win: #F27B64;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  padding-inline: 16px;
+  padding-block: 12px 20px;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+.app {
+  max-width: 440px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+button, input { font-family: inherit; touch-action: manipulation; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+h1 { margin: 0; font: 400 24px/1 var(--font-display); letter-spacing: .01em; }
+h1 span { font: 600 14px var(--font-body); color: var(--muted); margin-left: 8px; letter-spacing: .08em; text-transform: uppercase; }
+.tally { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+
+.team {
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.team.won { border-color: var(--win); }
+
+.head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; }
+.who { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.name {
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  color: var(--fg);
+  border: 0;
+  border-bottom: 1.5px dashed var(--line);
+  border-radius: 0;
+  padding: 2px 0;
+  font: 700 18px/1.15 var(--font-body);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.sub { font-size: 12.5px; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
+.won .sub { color: var(--win); }
+.score { font: 400 44px/1 var(--font-display); font-variant-numeric: tabular-nums; min-width: 1.3em; text-align: right; }
+.won .score { color: var(--win); }
+.controls { display: flex; gap: 8px; }
+.step {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  background: var(--btn);
+  color: var(--btn-fg);
+  font: 700 30px/1 var(--font-body);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+}
+.step.minus { background: transparent; color: var(--fg); border-color: var(--line); }
+.step:active { transform: scale(.95); }
+.step:disabled { opacity: .35; cursor: default; transform: none; }
+
+.half { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; }
+.tag {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  align-self: center;
+  justify-self: center;
+  font: 700 11px/1 var(--font-body);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.squares { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.sq { aspect-ratio: 1; max-width: 100%; background: var(--bg); border-radius: 10px; }
+.sq svg { display: block; width: 100%; height: 100%; }
+
+.on .wood { fill: var(--wood); stroke: var(--wood-edge); stroke-width: 1; }
+.on .head-dot { fill: var(--head); stroke: var(--head-edge); stroke-width: 1; }
+.off .wood, .off .head-dot { fill: var(--ghost); stroke: none; }
+.pop .in { transform-box: fill-box; transform-origin: center; animation: drop .3s cubic-bezier(.2, .9, .3, 1.15); }
+@keyframes drop { from { opacity: 0; transform: scale(1.6); } to { opacity: 1; transform: scale(1); } }
+
+.actions { display: flex; flex-direction: column; gap: 8px; }
+.ask { margin: 0; font-weight: 600; font-size: 15px; }
+.row { display: flex; gap: 8px; }
+.btn {
+  flex: 1;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: transparent;
+  color: var(--fg);
+  font: 700 15px var(--font-body);
+  letter-spacing: .02em;
+  cursor: pointer;
+}
+.btn.solid { background: var(--btn); color: var(--btn-fg); border-color: transparent; }
+.btn:disabled { opacity: .4; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pop .in { animation: none; }
+  .step:active { transform: none; }
+}
+</style>
+
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<main class="app" id="app">
+  <header class="top">
+    <h1>Truco<span>a 30</span></h1>
+    <p class="tally" id="tally" title="Partidas ganadas"></p>
+  </header>
+  <div id="teams" class="app"></div>
+  <div class="actions" id="actions"></div>
+</main>
+
+<script>
+(function () {
+  var TARGET = 30, HALF = 15;
+  var KEY = 'truco-fosforos-v1';
+
+  function clamp(n) { return Math.max(0, Math.min(TARGET, Math.round(n) || 0)); }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (s && Array.isArray(s.names) && Array.isArray(s.pts) && Array.isArray(s.wins)) {
+          return {
+            names: [String(s.names[0] || 'Nosotros').slice(0, 14), String(s.names[1] || 'Ellos').slice(0, 14)],
+            pts: [clamp(+s.pts[0]), clamp(+s.pts[1])],
+            wins: [Math.max(0, Math.round(+s.wins[0]) || 0), Math.max(0, Math.round(+s.wins[1]) || 0)]
+          };
+        }
+      }
+    } catch (e) {}
+    return { names: ['Nosotros', 'Ellos'], pts: [0, 0], wins: [0, 0] };
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  var state = load();
+  var pending = null;   // null | 'game' | 'all'
+  var lastAdd = null;   // { team, n } para animar el último fósforo
+
+  /* Fósforos: cuatro lados (cabeza en sentido horario) y la diagonal. */
+  var L = 66, T = 7.5;
+  var STICKS = [
+    { x: 50, y: 17, a: 0 },
+    { x: 83, y: 50, a: 90 },
+    { x: 50, y: 83, a: 180 },
+    { x: 17, y: 50, a: 270 },
+    { x: 50, y: 50, a: -45 }
+  ];
+
+  function stick(s, cls) {
+    return '<g transform="translate(' + s.x + ' ' + s.y + ') rotate(' + s.a + ')">' +
+      '<g class="stick ' + cls + '"><g class="in">' +
+      '<rect class="wood" x="' + (-L / 2) + '" y="' + (-T / 2) + '" width="' + L + '" height="' + T + '" rx="' + (T / 2) + '"/>' +
+      '<circle class="head-dot" cx="' + (L / 2 - 4) + '" cy="0" r="5.6"/>' +
+      '</g></g></g>';
+  }
+
+  function square(count, team, idx) {
+    var out = '';
+    for (var j = 0; j < STICKS.length; j++) {
+      var placed = j < count;
+      var n = idx * 5 + j + 1;
+      var pop = placed && lastAdd && lastAdd.team === team && lastAdd.n === n;
+      out += stick(STICKS[j], placed ? (pop ? 'on pop' : 'on') : 'off');
+    }
+    return '<svg viewBox="0 0 100 100" aria-hidden="true">' + out + '</svg>';
+  }
+
+  function teamHTML(t) {
+    return '<section class="team" id="team-' + t + '">' +
+      '<div class="head">' +
+        '<div class="who">' +
+          '<label class="sr" for="name-' + t + '">Nombre del equipo ' + (t + 1) + '</label>' +
+          '<input class="name" id="name-' + t + '" maxlength="14" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done">' +
+          '<div class="sub" id="sub-' + t + '"></div>' +
+        '</div>' +
+        '<div class="score" id="score-' + t + '" aria-live="polite"></div>' +
+        '<div class="controls">' +
+          '<button class="step minus" id="minus-' + t + '" type="button">−</button>' +
+          '<button class="step plus" id="plus-' + t + '" type="button">+</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="half"><span class="tag">Malas</span><div class="squares" id="malas-' + t + '"></div></div>' +
+      '<div class="half"><span class="tag">Buenas</span><div class="squares" id="buenas-' + t + '"></div></div>' +
+    '</section>';
+  }
+
+  var teamsEl = document.getElementById('teams');
+  teamsEl.innerHTML = teamHTML(0) + teamHTML(1);
+  var actionsEl = document.getElementById('actions');
+  var tallyEl = document.getElementById('tally');
+
+  function $(id) { return document.getElementById(id); }
+
+  function labels() {
+    for (var t = 0; t < 2; t++) {
+      var nm = state.names[t] || 'el equipo';
+      $('plus-' + t).setAttribute('aria-label', 'Sumar un punto a ' + nm);
+      $('minus-' + t).setAttribute('aria-label', 'Quitar un punto a ' + nm);
+    }
+  }
+
+  function add(t, d) {
+    pending = null;
+    if (d > 0 && (state.pts[0] >= TARGET || state.pts[1] >= TARGET)) return;
+    var np = clamp(state.pts[t] + d);
+    if (np === state.pts[t]) return;
+    state.pts[t] = np;
+    lastAdd = d > 0 ? { team: t, n: np } : null;
+    save();
+    update();
+  }
+
+  function squaresHTML(p, t, half) {
+    var out = '';
+    for (var k = 0; k < 3; k++) {
+      var idx = half * 3 + k;
+      var c = Math.max(0, Math.min(5, p - idx * 5));
+      out += '<div class="sq">' + square(c, t, idx) + '</div>';
+    }
+    return out;
+  }
+
+  function renderActions() {
+    var winner = state.pts[0] >= TARGET ? 0 : (state.pts[1] >= TARGET ? 1 : -1);
+    var total = state.pts[0] + state.pts[1];
+    if (pending) {
+      var msg = pending === 'all' ? '¿Borrar los puntos y las partidas ganadas?' : '¿Empezar otra partida y borrar los puntos?';
+      actionsEl.innerHTML = '<p class="ask">' + msg + '</p>' +
+        '<div class="row"><button class="btn solid" data-act="yes" type="button">Sí, borrar</button>' +
+        '<button class="btn" data-act="no" type="button">Cancelar</button></div>';
+    } else if (winner > -1) {
+      actionsEl.innerHTML = '<div class="row"><button class="btn solid" data-act="close" type="button">Sumar partida</button>' +
+        '<button class="btn" data-act="clear" type="button">Borrar todo</button></div>';
+    } else {
+      actionsEl.innerHTML = '<div class="row"><button class="btn" data-act="newgame" type="button"' + (total === 0 ? ' disabled' : '') + '>Nueva partida</button>' +
+        '<button class="btn" data-act="clear" type="button"' + (total === 0 && state.wins[0] + state.wins[1] === 0 ? ' disabled' : '') + '>Borrar todo</button></div>';
+    }
+  }
+
+  function update() {
+    var anyWon = state.pts[0] >= TARGET || state.pts[1] >= TARGET;
+    for (var t = 0; t < 2; t++) {
+      var p = state.pts[t], won = p >= TARGET;
+      $('team-' + t).classList.toggle('won', won);
+      $('score-' + t).textContent = p;
+      $('sub-' + t).textContent = won ? '¡Ganó!' : (p >= HALF ? 'Buenas · faltan ' : 'Malas · faltan ') + (TARGET - p);
+      $('plus-' + t).disabled = anyWon;
+      $('minus-' + t).disabled = p === 0;
+      $('malas-' + t).innerHTML = squaresHTML(p, t, 0);
+      $('buenas-' + t).innerHTML = squaresHTML(p, t, 1);
+    }
+    tallyEl.textContent = 'Partidas ' + state.wins[0] + ' – ' + state.wins[1];
+    renderActions();
+    labels();
+    lastAdd = null;
+  }
+
+  for (var t = 0; t < 2; t++) {
+    (function (t) {
+      var input = $('name-' + t);
+      input.value = state.names[t];
+      input.addEventListener('input', function () {
+        state.names[t] = input.value.slice(0, 14);
+        save();
+        labels();
+      });
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') input.blur(); });
+      $('plus-' + t).addEventListener('click', function () { add(t, 1); });
+      $('minus-' + t).addEventListener('click', function () { add(t, -1); });
+    })(t);
+  }
+
+  actionsEl.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b || b.disabled) return;
+    var act = b.getAttribute('data-act');
+    if (act === 'newgame') pending = 'game';
+    else if (act === 'clear') pending = 'all';
+    else if (act === 'no') pending = null;
+    else if (act === 'yes') {
+      state.pts = [0, 0];
+      if (pending === 'all') state.wins = [0, 0];
+      pending = null;
+      save();
+    } else if (act === 'close') {
+      var w = state.pts[0] >= TARGET ? 0 : 1;
+      state.wins[w] += 1;
+      state.pts = [0, 0];
+      save();
+    }
+    update();
+  });
+
+  /* Pantalla encendida mientras se juega (si el navegador lo permite). */
+  function wake() {
+    try {
+      if ('wakeLock' in navigator && document.visibilityState === 'visible') {
+        navigator.wakeLock.request('screen').catch(function () {});
+      }
+    } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', wake);
+  document.addEventListener('pointerdown', wake, { once: true });
+  wake();
+
+  update();
+})();
+</script>
+</body>
+</html>
